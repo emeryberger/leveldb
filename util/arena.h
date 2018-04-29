@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include "port/port.h"
 
+#define DISABLE_ARENA 1 // If set to 1, just use malloc to satisfy memory requests.
+
 namespace leveldb {
 
 class Arena {
@@ -50,6 +52,13 @@ class Arena {
 };
 
 inline char* Arena::Allocate(size_t bytes) {
+#if DISABLE_ARENA
+  char * obj = new char[bytes];
+  blocks_.push_back(obj);
+  memory_usage_.NoBarrier_Store(
+				reinterpret_cast<void*>(MemoryUsage() + bytes + sizeof(char*)));
+  return obj;
+#endif
   // The semantics of what to return are a bit messy if we allow
   // 0-byte allocations, so we disallow them here (we don't need
   // them for our internal use).
